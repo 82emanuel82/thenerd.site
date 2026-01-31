@@ -1,0 +1,160 @@
+ body {
+      box-sizing: border-box;
+    }
+    
+    :root {
+      --bg-primary: #0a0a0b;
+      --bg-secondary: #141416;
+      --text-primary: #e8e8e8;
+      --accent-green: #4ade80;
+      --accent-amber: #fbbf24;
+    }
+    
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: #2a2a2e #0a0a0b;
+    }
+    
+    .font-mono-tech {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    
+    .font-body {
+      font-family: 'IBM Plex Sans', sans-serif;
+    }
+    
+    .terminal-cursor {
+      animation: blink 1s step-end infinite;
+    }
+    
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+    
+    @keyframes scanline {
+      0% { transform: translateY(-100%); }
+      100% { transform: translateY(100%); }
+    }
+    
+    .scanline-effect::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(74, 222, 128, 0.1), transparent);
+      animation: scanline 8s linear infinite;
+      pointer-events: none;
+    }
+    
+    .nav-link {
+      position: relative;
+    }
+    
+    .nav-link::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      left: 0;
+      width: 0;
+      height: 1px;
+      background: var(--accent-green);
+      transition: width 0.3s ease;
+    }
+    
+    .nav-link:hover::after {
+      width: 100%;
+    }
+    
+    .status-badge {
+      font-size: 0.65rem;
+      padding: 2px 8px;
+      border-radius: 2px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    
+    .project-card {
+      border: 1px solid #2a2a2e;
+      transition: border-color 0.3s ease, transform 0.2s ease;
+    }
+    
+    .project-card:hover {
+      border-color: #4ade80;
+      transform: translateY(-2px);
+    }
+    
+    .log-entry {
+      border-left: 2px solid #2a2a2e;
+      transition: border-color 0.3s ease;
+    }
+    
+    .log-entry:hover {
+      border-left-color: #fbbf24;
+    }
+    
+    .section-marker {
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+      letter-spacing: 0.2em;
+    }
+    
+    .glow-text {
+      text-shadow: 0 0 20px rgba(74, 222, 128, 0.3);
+    }
+    
+    .idea-card {
+      background: linear-gradient(135deg, #141416 0%, #1a1a1e 100%);
+      border: 1px dashed #3a3a3e;
+    }
+    
+    .tool-badge {
+      background: #1a1a1e;
+      border: 1px solid #2a2a2e;
+    }
+    
+    .page-section {
+      display: none;
+      animation: fadeIn 0.4s ease-in-out;
+    }
+    
+    .page-section.active {
+      display: block;
+    }
+    
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    .nav-link.active {
+      color: var(--accent-green);
+    }
+
+    .translation-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.65rem;
+      padding: 2px 8px;
+      border-radius: 2px;
+      background: #1a1a1e;
+      border: 1px solid #2a2a2e;
+    }
+    
+    .log-content {
+      white-space: pre-wrap;
+      line-height: 1.6;
+    }
+
+@view-transition {
+  navigation: auto;
+}
