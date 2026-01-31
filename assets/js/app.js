@@ -1,0 +1,1139 @@
+ const defaultConfig = {
+      site_title: 'the-nerd.site',
+      hero_tagline: 'Learning in public. Breaking things. Taking notes.',
+      pact_title: "The Nerd's Pact",
+      language: 'en',
+      background_color: '#0a0a0b',
+      surface_color: '#141416',
+      text_color: '#e8e8e8',
+      accent_primary: '#4ade80',
+      accent_secondary: '#fbbf24'
+    };
+
+    let currentLanguage = 'en';
+    
+    // Admin unlock system
+    let logoClickCount = 0;
+    let logoClickTimer = null;
+    let isAdminMode = false;
+    const ADMIN_PASSWORD = 'nerd2025'; // Change this to your preferred password
+    
+    function unlockAdminMode() {
+      isAdminMode = true;
+      // Show all admin elements
+      document.querySelectorAll('.admin-only').forEach(el => {
+        el.style.display = '';
+      });
+      
+      // Save admin mode to session (persists during browser session)
+      sessionStorage.setItem('adminMode', 'true');
+      
+      // Show success notification
+      const notification = document.createElement('div');
+      notification.className = 'fixed top-20 right-6 bg-[#4ade80] text-[#0a0a0b] font-mono-tech font-semibold px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-in';
+      notification.textContent = '🔓 Admin Mode Activated';
+      document.body.appendChild(notification);
+      
+      setTimeout(() => notification.remove(), 3000);
+    }
+    
+    function checkAdminSession() {
+      if (sessionStorage.getItem('adminMode') === 'true') {
+        unlockAdminMode();
+      }
+    }
+    
+    function handleLogoClick(e) {
+      e.preventDefault();
+      logoClickCount++;
+      
+      // Reset counter after 2 seconds
+      clearTimeout(logoClickTimer);
+      logoClickTimer = setTimeout(() => {
+        logoClickCount = 0;
+      }, 2000);
+      
+      // Three clicks triggers password prompt
+      if (logoClickCount === 3) {
+        logoClickCount = 0;
+        showPasswordPrompt();
+      }
+    }
+    
+    function showPasswordPrompt() {
+      const modal = document.createElement('div');
+      modal.className = 'fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-6';
+      modal.innerHTML = `
+        <div class="bg-[#141416] border border-[#2a2a2e] rounded-lg p-8 max-w-md w-full">
+          <div class="flex items-center gap-3 mb-6">
+            <span class="text-2xl">🔐</span>
+            <h3 class="font-mono-tech text-xl font-bold text-[#4ade80]">Admin Access</h3>
+          </div>
+          
+          <form id="password-form" class="space-y-4">
+            <div>
+              <label for="admin-password" class="block font-mono-tech text-sm mb-2 text-[#c0c0c0]">Enter Password</label>
+              <input type="password" id="admin-password" placeholder="••••••••" class="w-full bg-[#1a1a1e] border border-[#2a2a2e] rounded px-4 py-3 text-[#e8e8e8] font-mono-tech focus:border-[#4ade80] focus:outline-none" autofocus>
+            </div>
+            
+            <div id="password-error" class="hidden text-[#ef4444] text-sm font-mono-tech">
+              ❌ Incorrect password
+            </div>
+            
+            <div class="flex gap-3">
+              <button type="submit" class="flex-1 bg-[#4ade80] hover:bg-[#3bc96f] text-[#0a0a0b] font-mono-tech font-semibold px-6 py-3 rounded transition-colors">
+                Unlock
+              </button>
+              <button type="button" id="cancel-password" class="px-6 py-3 border border-[#2a2a2e] rounded text-[#a0a0a0] hover:text-[#e8e8e8] hover:border-[#4a4a4e] transition-colors font-mono-tech">
+                Cancel
+              </button>
+            </div>
+          </form>
+          
+          <p class="text-xs text-[#606060] mt-4 font-mono-tech text-center">
+            // Hint: Triple-click the logo to access this panel
+          </p>
+        </div>
+      `;
+      
+      document.body.appendChild(modal);
+      
+      const form = document.getElementById('password-form');
+      const passwordInput = document.getElementById('admin-password');
+      const errorDiv = document.getElementById('password-error');
+      
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const password = passwordInput.value;
+        
+        if (password === ADMIN_PASSWORD) {
+          modal.remove();
+          unlockAdminMode();
+        } else {
+          errorDiv.classList.remove('hidden');
+          passwordInput.value = '';
+          passwordInput.classList.add('border-[#ef4444]');
+          
+          setTimeout(() => {
+            errorDiv.classList.add('hidden');
+            passwordInput.classList.remove('border-[#ef4444]');
+          }, 2000);
+        }
+      });
+      
+      document.getElementById('cancel-password').addEventListener('click', () => {
+        modal.remove();
+      });
+      
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) modal.remove();
+      });
+    }
+
+    // Helper function to get translated text
+    function getTranslatedText(item, field) {
+      const itField = `${field}_it`;
+      const enValue = item[field];
+      const itValue = item[itField];
+      
+      // If only one language is available, show it regardless of current language
+      if (enValue && !itValue) return enValue;
+      if (itValue && !enValue) return itValue;
+      
+      // If both are available, use language preference
+      if (currentLanguage === 'it' && itValue) {
+        return itValue;
+      }
+      return enValue || itValue || '';
+    }
+
+    // Helper function to check if item has translation
+    function hasTranslation(item) {
+      return !!(item.title_it && item.title) || !!(item.description_it && item.description);
+    }
+
+    // Toggle language
+    function toggleLanguage() {
+      currentLanguage = currentLanguage === 'en' ? 'it' : 'en';
+      updateLanguage();
+      // Re-render all content with new language
+      renderRecentActivity();
+      renderLabProjects();
+      renderIncubatorIdeas();
+      renderToolboxItems();
+    }
+
+    function updateLanguage() {
+      // Update language toggle button
+      const langToggle = document.getElementById('lang-toggle');
+      if (currentLanguage === 'en') {
+        langToggle.textContent = 'EN / IT';
+      } else {
+        langToggle.textContent = 'IT / EN';
+      }
+      
+      // Update hero tagline and note
+      const heroTagline = document.getElementById('hero-tagline');
+      const heroNote = document.getElementById('hero-note');
+      if (currentLanguage === 'en') {
+        heroTagline.textContent = 'Learning in public. Breaking things. Taking notes.';
+        heroNote.textContent = '// This site is itself a project in progress';
+      } else {
+        heroTagline.textContent = 'Imparare in pubblico. Rompere le cose. Prendere appunti.';
+        heroNote.textContent = '// Questo sito è esso stesso un progetto in corso';
+      }
+      
+      // Update Pact content
+      const pactContent = document.getElementById('pact-content');
+      if (currentLanguage === 'en') {
+        pactContent.innerHTML = `
+          <li class="flex items-start gap-3">
+            <span class="text-[#4ade80] font-mono-tech">01.</span>
+            <span>I'm not an expert. I'm learning, publicly and messily.</span>
+          </li>
+          <li class="flex items-start gap-3">
+            <span class="text-[#4ade80] font-mono-tech">02.</span>
+            <span>I document failures as much as successes. Often more.</span>
+          </li>
+          <li class="flex items-start gap-3">
+            <span class="text-[#4ade80] font-mono-tech">03.</span>
+            <span>AI is my assistant, not my ghost writer. The curiosity is mine.</span>
+          </li>
+          <li class="flex items-start gap-3">
+            <span class="text-[#4ade80] font-mono-tech">04.</span>
+            <span>When I don't know something, I say so. Confusion is part of the log.</span>
+          </li>
+          <li class="flex items-start gap-3">
+            <span class="text-[#4ade80] font-mono-tech">05.</span>
+            <span>The magic isn't the result. It's the path to get there.</span>
+          </li>
+        `;
+      } else {
+        pactContent.innerHTML = `
+          <li class="flex items-start gap-3">
+            <span class="text-[#4ade80] font-mono-tech">01.</span>
+            <span>Non sono un esperto. Sto imparando, pubblicamente e in modo disordinato.</span>
+          </li>
+          <li class="flex items-start gap-3">
+            <span class="text-[#4ade80] font-mono-tech">02.</span>
+            <span>Documento i fallimenti tanto quanto i successi. Spesso di più.</span>
+          </li>
+          <li class="flex items-start gap-3">
+            <span class="text-[#4ade80] font-mono-tech">03.</span>
+            <span>L'AI è il mio assistente, non il mio ghost writer. La curiosità è mia.</span>
+          </li>
+          <li class="flex items-start gap-3">
+            <span class="text-[#4ade80] font-mono-tech">04.</span>
+            <span>Quando non so qualcosa, lo dico. La confusione fa parte del log.</span>
+          </li>
+          <li class="flex items-start gap-3">
+            <span class="text-[#4ade80] font-mono-tech">05.</span>
+            <span>La magia non è il risultato. È il percorso per arrivarci.</span>
+          </li>
+        `;
+      }
+      
+      // Update LAB section
+      const labTitle = document.getElementById('lab-title');
+      const labDescription = document.getElementById('lab-description');
+      const labSubtitle = document.getElementById('lab-subtitle');
+      const labEmptyText = document.getElementById('lab-empty-text');
+      
+      if (currentLanguage === 'en') {
+        labTitle.innerHTML = '<span class="text-[#4ade80]">&gt;</span> Lab';
+        labDescription.textContent = 'Active experiments, ongoing projects, and things I\'m currently breaking. Each project is a living document.';
+        labSubtitle.textContent = 'All Projects';
+        labEmptyText.textContent = 'No lab projects yet';
+      } else {
+        labTitle.innerHTML = '<span class="text-[#4ade80]">&gt;</span> Lab';
+        labDescription.textContent = 'Esperimenti attivi, progetti in corso e cose che sto attualmente rompendo. Ogni progetto è un documento vivo.';
+        labSubtitle.textContent = 'Tutti i Progetti';
+        labEmptyText.textContent = 'Nessun progetto nel lab ancora';
+      }
+      
+      // Update INCUBATOR section
+      const incubatorTitle = document.getElementById('incubator-title');
+      const incubatorDescription = document.getElementById('incubator-description');
+      
+      if (currentLanguage === 'en') {
+        incubatorTitle.innerHTML = '<span class="text-[#fbbf24]">&gt;</span> Incubator';
+        incubatorDescription.textContent = 'Ideas that haven\'t become projects yet. Mental experiments, future possibilities, things I\'m curious about.';
+      } else {
+        incubatorTitle.innerHTML = '<span class="text-[#fbbf24]">&gt;</span> Incubatore';
+        incubatorDescription.textContent = 'Idee che non sono ancora diventate progetti. Esperimenti mentali, possibilità future, cose che mi incuriosiscono.';
+      }
+      
+      // Update TOOLBOX section
+      const toolboxTitle = document.getElementById('toolbox-title');
+      const toolboxDescription = document.getElementById('toolbox-description');
+      
+      if (currentLanguage === 'en') {
+        toolboxTitle.innerHTML = '<span class="text-[#8b5cf6]">&gt;</span> Toolbox';
+        toolboxDescription.textContent = 'Tools I actually use in my projects. Not reviews or recommendations—just context about what worked (or didn\'t) for me.';
+      } else {
+        toolboxTitle.innerHTML = '<span class="text-[#8b5cf6]">&gt;</span> Toolbox';
+        toolboxDescription.textContent = 'Strumenti che uso effettivamente nei miei progetti. Non recensioni o raccomandazioni—solo contesto su cosa ha funzionato (o no) per me.';
+      }
+      
+      // Update WHO section
+      const whoTitle = document.getElementById('who-title');
+      const whoSubtitle = document.getElementById('who-subtitle');
+      const whoTagline = document.getElementById('who-tagline');
+      const whoBio = document.getElementById('who-bio');
+      const contactTitle = document.getElementById('contact-title');
+      
+      if (currentLanguage === 'en') {
+        whoTitle.innerHTML = '<span class="text-[#e8e8e8]">&gt;</span> Who is The Nerd?';
+        whoSubtitle.textContent = 'The Nerd';
+        whoTagline.textContent = 'Curious human, professional learner';
+        contactTitle.textContent = 'Get in Touch';
+        whoBio.innerHTML = `
+          <p>
+            I'm not a developer by profession. I'm not an expert in anything you'll find on this site. I'm just someone who gets curious about things and then can't stop until I've figured them out (or failed spectacularly trying).
+          </p>
+          <p>
+            This site is my public notebook. A place where I document the <em>process</em> of learning, not just the results. Because I've realized that the interesting part is never the finished product—it's all the confusion, mistakes, and "aha" moments along the way.
+          </p>
+          <p>
+            I work with AI as my assistant. Think of it like Watson to Sherlock, or Robin to Batman. The curiosity and direction are mine; the AI helps me translate messy ideas into working experiments. I believe this is the most honest way to work with these tools: acknowledge them, credit them, but don't let them replace the human spark.
+          </p>
+          <p class="text-[#fbbf24]">
+            If you're here expecting polished tutorials or expert knowledge, you'll be disappointed. If you're here to watch someone learn in real-time, make mistakes, and occasionally figure things out   welcome home.
+          </p>
+        `;
+      } else {
+        whoTitle.innerHTML = '<span class="text-[#e8e8e8]">&gt;</span> Chi è The Nerd?';
+        whoSubtitle.textContent = 'The Nerd';
+        whoTagline.textContent = 'Umano curioso, studente professionale';
+        contactTitle.textContent = 'Contattami';
+        whoBio.innerHTML = `
+          <p>
+            Non sono uno sviluppatore di professione. Non sono un esperto in nulla di ciò che troverai su questo sito. Sono solo qualcuno che si incuriosisce delle cose e poi non riesce a fermarsi finché non le ha capite (o ha fallito spettacolarmente nel tentativo).
+          </p>
+          <p>
+            Questo sito è il mio quaderno pubblico. Un luogo dove documento il <em>processo</em> di apprendimento, non solo i risultati. Perché ho capito che la parte interessante non è mai il prodotto finito—sono tutta la confusione, gli errori e i momenti "aha" lungo il percorso.
+          </p>
+          <p>
+            Lavoro con l'AI come mio assistente. Pensalo come Watson per Sherlock, o Robin per Batman. La curiosità e la direzione sono mie; l'AI mi aiuta a tradurre idee disordinate in esperimenti funzionanti. Credo che questo sia il modo più onesto di lavorare con questi strumenti: riconoscerli, dar loro credito, ma non lasciare che sostituiscano la scintilla umana.
+          </p>
+          <p class="text-[#fbbf24]">
+            Se sei qui aspettandoti tutorial rifiniti o conoscenze da esperto, rimarrai deluso. Se sei qui per guardare qualcuno imparare in tempo reale, fare errori e occasionalmente capire le cose—benvenuto a casa.
+          </p>
+        `;
+      }
+    }
+
+    // Mobile menu toggle
+    function toggleMobileMenu() {
+      const menu = document.getElementById('mobile-menu');
+      menu.classList.toggle('hidden');
+    }
+
+    // Smooth scroll for navigation
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', function (e) {
+        e.preventDefault();
+        const page = this.getAttribute('data-page');
+        if (page) {
+          navigateToPage(page);
+          // Close mobile menu if open
+          document.getElementById('mobile-menu').classList.add('hidden');
+        }
+      });
+    });
+
+    // SPA Navigation System
+    function navigateToPage(pageId) {
+      // Hide all pages
+      document.querySelectorAll('.page-section').forEach(section => {
+        section.classList.remove('active');
+      });
+      
+      // Show selected page
+      const targetPage = document.getElementById(pageId);
+      if (targetPage) {
+        targetPage.classList.add('active');
+        
+        // Scroll to top
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+      
+      // Update active nav link
+      document.querySelectorAll('.nav-link').forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('data-page') === pageId) {
+          link.classList.add('active');
+        }
+      });
+      
+      // Update URL hash without scrolling
+      history.pushState(null, null, `#${pageId}`);
+    }
+    
+    // Handle browser back/forward buttons
+    window.addEventListener('popstate', function() {
+      const hash = window.location.hash.substring(1) || 'home';
+      navigateToPage(hash);
+    });
+    
+    // Initialize on page load with hash
+    window.addEventListener('load', function() {
+      const hash = window.location.hash.substring(1) || 'home';
+      navigateToPage(hash);
+    });
+
+    // Data SDK Integration
+    let allItems = [];
+    let currentFilter = 'all';
+    let editingItem = null;
+
+    const dataHandler = {
+      onDataChanged(data) {
+        allItems = data;
+        updateItemCount();
+        renderRecentActivity();
+        renderLabProjects();
+        renderIncubatorIdeas();
+        renderToolboxItems();
+        renderAdminList();
+      }
+    };
+
+    async function initDataSDK() {
+      if (window.dataSdk) {
+        const result = await window.dataSdk.init(dataHandler);
+        if (!result.isOk) {
+          console.error('Failed to initialize data SDK');
+        }
+      }
+    }
+
+    function updateItemCount() {
+      const counter = document.getElementById('item-count');
+      if (counter) {
+        counter.textContent = allItems.length;
+        if (allItems.length >= 999) {
+          counter.parentElement.classList.add('text-[#ef4444]');
+        } else {
+          counter.parentElement.classList.remove('text-[#ef4444]');
+        }
+      }
+    }
+
+    function formatTimestamp(isoString) {
+      if (!isoString) return '';
+      const date = new Date(isoString);
+      return date.toLocaleString('en-GB', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+
+    function renderRecentActivity() {
+      const container = document.getElementById('recent-activity-list');
+      const emptyState = document.getElementById('recent-activity-empty');
+      
+      // Sort all items by creation date (most recent first) and take top 3
+      const recentItems = [...allItems]
+        .sort((a, b) => {
+          const dateA = new Date(a.created_at || 0);
+          const dateB = new Date(b.created_at || 0);
+          return dateB - dateA;
+        })
+        .slice(0, 3);
+      
+      if (recentItems.length === 0) {
+        container.style.display = 'none';
+        emptyState.style.display = 'block';
+      } else {
+        container.style.display = 'grid';
+        emptyState.style.display = 'none';
+        
+        container.innerHTML = recentItems.map(item => {
+          const descriptionHTML = getTranslatedText(item, 'description').replace(/\n/g, '<br>');
+          const typeColors = {
+            lab: '#4ade80',
+            incubator: '#fbbf24',
+            toolbox: '#8b5cf6'
+          };
+          const typeColor = typeColors[item.type] || '#4ade80';
+          
+          return `
+          <div class="project-card bg-[#141416] rounded-lg p-6 cursor-pointer" onclick="openProjectDetail('${item.__backendId}')">
+            <div class="flex flex-col md:flex-row md:items-start justify-between gap-4">
+              <div class="flex-1">
+                <div class="flex items-center gap-3 mb-2">
+                  <span class="text-2xl">${item.emoji || '📦'}</span>
+                  <h3 class="font-mono-tech text-lg font-medium">${getTranslatedText(item, 'title')}</h3>
+                  <span class="status-badge bg-[${typeColor}]/20" style="color: ${typeColor}">${item.type.toUpperCase()}</span>
+                  ${item.status ? `<span class="status-badge ${getStatusClass(item.status)}">${item.status}</span>` : ''}
+                  ${hasTranslation(item) ? `<span class="translation-badge font-mono-tech">🌐 EN/IT</span>` : ''}
+                </div>
+                ${item.created_at ? `<div class="font-mono-tech text-xs mb-2"><span style="color: ${typeColor}; font-weight: 600;">[CREATED ${formatTimestamp(item.created_at)}]</span>${item.updated_at && item.updated_at !== item.created_at ? ` <span style="color: #fbbf24; font-weight: 600;">[UPDATED ${formatTimestamp(item.updated_at)}]</span>` : ''}</div>` : ''}
+                <div class="text-[#a0a0a0] text-sm log-content">${descriptionHTML}</div>
+              </div>
+            </div>
+          </div>
+        `}).join('');
+      }
+    }
+
+    function renderLabProjects() {
+      const container = document.getElementById('lab-projects-list');
+      const emptyState = document.getElementById('lab-projects-empty');
+      
+      const labProjects = allItems.filter(item => item.type === 'lab');
+      
+      if (labProjects.length === 0) {
+        container.style.display = 'none';
+        emptyState.style.display = 'block';
+      } else {
+        container.style.display = 'grid';
+        emptyState.style.display = 'none';
+        
+        container.innerHTML = labProjects.map(project => {
+          const tags = project.tags;
+          const descriptionHTML = getTranslatedText(project, 'description').replace(/\n/g, '<br>');
+          return `
+          <div class="project-card bg-[#141416] rounded-lg p-5 cursor-pointer" onclick="openProjectDetail('${project.__backendId}')">
+            <div class="flex flex-col gap-3">
+              <div class="flex items-start gap-4">
+                <span class="text-2xl">${project.emoji || '🔬'}</span>
+                <div class="flex-1">
+                  <div class="flex items-center gap-2 mb-1 flex-wrap">
+                    <span class="font-mono-tech font-medium">${getTranslatedText(project, 'title')}</span>
+                    <span class="status-badge ${getStatusClass(project.status)}">${project.status || 'In Progress'}</span>
+                    ${hasTranslation(project) ? `<span class="translation-badge font-mono-tech">🌐 EN/IT</span>` : ''}
+                  </div>
+                  ${project.created_at ? `<div class="font-mono-tech text-xs mb-2"><span style="color: #4ade80; font-weight: 600;">[CREATED ${formatTimestamp(project.created_at)}]</span>${project.updated_at && project.updated_at !== project.created_at ? ` <span style="color: #fbbf24; font-weight: 600;">[UPDATED ${formatTimestamp(project.updated_at)}]</span>` : ''}</div>` : ''}
+                  <div class="text-sm text-[#808080] log-content">${descriptionHTML}</div>
+                  ${tags ? `<div class="flex flex-wrap gap-1 mt-2">
+                    ${tags.split(',').map(tag => `<span class="tool-badge font-mono-tech text-xs px-2 py-1 rounded">${tag.trim()}</span>`).join('')}
+                  </div>` : ''}
+                </div>
+              </div>
+            </div>
+          </div>
+        `}).join('');
+      }
+    }
+
+    function renderIncubatorIdeas() {
+      const container = document.getElementById('incubator-ideas-list');
+      const incubatorIdeas = allItems.filter(item => item.type === 'incubator');
+      
+      if (incubatorIdeas.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-full bg-[#141416] border border-dashed border-[#2a2a2e] rounded-lg p-12 text-center">
+            <span class="text-5xl block mb-4">💡</span>
+            <p class="font-mono-tech text-[#606060]">No ideas yet</p>
+          </div>
+        `;
+      } else {
+        container.innerHTML = incubatorIdeas.map(idea => {
+          const descriptionHTML = getTranslatedText(idea, 'description').replace(/\n/g, '<br>');
+          return `
+          <div class="idea-card rounded-lg p-6 hover:border-[#fbbf24] transition-colors cursor-pointer" onclick="openProjectDetail('${idea.__backendId}')">
+            <div class="flex items-start gap-4">
+              <span class="text-2xl">${idea.emoji || '💡'}</span>
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-2 flex-wrap">
+                  <h3 class="font-mono-tech font-medium">${getTranslatedText(idea, 'title')}</h3>
+                  ${hasTranslation(idea) ? `<span class="translation-badge font-mono-tech">🌐 EN/IT</span>` : ''}
+                </div>
+                ${idea.created_at ? `<div class="font-mono-tech text-xs mb-2"><span style="color: #fbbf24; font-weight: 600;">[CREATED ${formatTimestamp(idea.created_at)}]</span>${idea.updated_at && idea.updated_at !== idea.created_at ? ` <span style="color: #4ade80; font-weight: 600;">[UPDATED ${formatTimestamp(idea.updated_at)}]</span>` : ''}</div>` : ''}
+                <div class="text-sm text-[#a0a0a0] mb-4 log-content">${descriptionHTML}</div>
+              </div>
+            </div>
+          </div>
+        `}).join('');
+      }
+    }
+
+    function renderToolboxItems() {
+      const categories = {
+        'Software': { items: [], emoji: '⚙️', color: '#4ade80' },
+        'AI': { items: [], emoji: '      ', color: '#fbbf24' },
+        'Hardware': { items: [], emoji: '  ', color: '#8b5cf6' }
+      };
+      
+      allItems.filter(item => item.type === 'toolbox').forEach(item => {
+        const cat = item.category || 'Software';
+        if (categories[cat]) {
+          categories[cat].items.push(item);
+        }
+      });
+      
+      const container = document.getElementById('toolbox-categories');
+      let html = '';
+      
+      for (const [catName, catData] of Object.entries(categories)) {
+        if (catData.items.length > 0) {
+          html += `
+            <div>
+              <h3 class="font-mono-tech text-lg font-semibold mb-4 flex items-center gap-2">
+                <span class="text-[${catData.color}]">${catData.emoji}</span> ${catName}
+              </h3>
+              <div class="grid md:grid-cols-2 gap-4">
+                ${catData.items.map(tool => `
+                  <div class="bg-[#141416] border border-[#2a2a2e] rounded-lg p-5">
+                    <div class="flex items-start gap-4">
+                      <div class="w-10 h-10 bg-[#1a1a1e] rounded flex items-center justify-center text-xl">${tool.emoji || '🔧'}</div>
+                      <div class="flex-1">
+                        <div class="flex items-center gap-2 mb-1 flex-wrap">
+                          <h4 class="font-mono-tech font-medium">${getTranslatedText(tool, 'title')}</h4>
+                          ${hasTranslation(tool) ? `<span class="translation-badge font-mono-tech">     EN/IT</span>` : ''}
+                        </div>
+                        <p class="text-sm text-[#808080] mt-1">${getTranslatedText(tool, 'description')}</p>
+                      </div>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `;
+        }
+      }
+      
+      if (html === '') {
+        container.innerHTML = `
+          <div class="bg-[#141416] border border-dashed border-[#2a2a2e] rounded-lg p-12 text-center">
+            <span class="text-5xl block mb-4">🔧</span>
+            <p class="font-mono-tech text-[#606060]">No tools yet</p>
+          </div>
+        `;
+      } else {
+        container.innerHTML = html;
+      }
+    }
+
+    function renderAdminList() {
+      const container = document.getElementById('items-list');
+      const emptyState = document.getElementById('empty-state');
+      
+      const filteredItems = currentFilter === 'all' ? allItems : allItems.filter(item => item.type === currentFilter);
+      
+      if (filteredItems.length === 0) {
+        container.style.display = 'none';
+        emptyState.style.display = 'block';
+      } else {
+        container.style.display = 'block';
+        emptyState.style.display = 'none';
+        
+        container.innerHTML = filteredItems.map(item => `
+          <div class="bg-[#141416] border border-[#2a2a2e] rounded-lg p-5" data-item-id="${item.__backendId}">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-4 flex-1">
+                <span class="text-2xl">${item.emoji || '📦'}</span>
+                <div class="flex-1">
+                  <div class="flex items-center gap-2 mb-1 flex-wrap">
+                    <span class="font-mono-tech font-medium">${item.title}</span>
+                    ${item.title_it ? `<span class="translation-badge font-mono-tech">   🇹 ${item.title_it}</span>` : ''}
+                    <span class="status-badge bg-[#606060]/20 text-[#a0a0a0]">${item.type}</span>
+                    ${item.status ? `<span class="status-badge ${getStatusClass(item.status)}">${item.status}</span>` : ''}
+                  </div>
+                  <p class="text-sm text-[#808080]">${item.description}</p>
+                  ${item.description_it ? `<p class="text-sm text-[#606060] mt-1">🇮🇹 ${item.description_it}</p>` : ''}
+                </div>
+              </div>
+              <div class="flex items-center gap-2 admin-only" style="display: none;">
+                <button onclick="editItem('${item.__backendId}')" class="px-3 py-1 text-sm font-mono-tech text-[#4ade80] hover:bg-[#4ade80]/10 rounded transition-colors">
+                  Edit
+                </button>
+                <button onclick="deleteItem('${item.__backendId}')" class="px-3 py-1 text-sm font-mono-tech text-[#ef4444] hover:bg-[#ef4444]/10 rounded transition-colors">
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        `).join('');
+      }
+    }
+
+    function getStatusClass(status) {
+      const classes = {
+        'In Progress': 'bg-[#4ade80]/20 text-[#4ade80]',
+        'Paused': 'bg-[#fbbf24]/20 text-[#fbbf24]',
+        'Completed': 'bg-[#8b5cf6]/20 text-[#8b5cf6]'
+      };
+      return classes[status] || 'bg-[#606060]/20 text-[#a0a0a0]';
+    }
+
+    window.editItem = function(itemId) {
+      const item = allItems.find(i => i.__backendId === itemId);
+      if (!item) return;
+      
+      // Show edit modal
+      const modal = document.createElement('div');
+      modal.className = 'fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-6';
+      modal.innerHTML = `
+        <div class="bg-[#141416] border border-[#2a2a2e] rounded-lg p-8 max-w-md w-full">
+          <h3 class="font-mono-tech text-xl font-bold mb-4 text-[#4ade80]">Edit Mode</h3>
+          <p class="text-[#a0a0a0] mb-6">Choose how to edit this log entry:</p>
+          
+          <div class="space-y-3 mb-6">
+            <button id="edit-mode-modify" class="w-full bg-[#1a1a1e] hover:bg-[#2a2a2e] border border-[#2a2a2e] hover:border-[#4ade80] rounded-lg p-4 text-left transition-colors">
+              <div class="font-mono-tech font-semibold mb-1 text-[#4ade80]">✏️ Modify</div>
+              <div class="text-sm text-[#808080]">Replace current text (fix typos, corrections)</div>
+            </button>
+            
+            <button id="edit-mode-update" class="w-full bg-[#1a1a1e] hover:bg-[#2a2a2e] border border-[#2a2a2e] hover:border-[#fbbf24] rounded-lg p-4 text-left transition-colors">
+              <div class="font-mono-tech font-semibold mb-1 text-[#fbbf24]">📝 Update</div>
+              <div class="text-sm text-[#808080]">Append new developments with timestamp</div>
+            </button>
+          </div>
+          
+          <button id="edit-mode-cancel" class="w-full py-2 text-[#606060] hover:text-[#e8e8e8] font-mono-tech text-sm transition-colors">
+            Cancel
+          </button>
+        </div>
+      `;
+      
+      document.body.appendChild(modal);
+      
+      document.getElementById('edit-mode-modify').onclick = () => {
+        modal.remove();
+        startEditMode(item, 'modify');
+      };
+      
+      document.getElementById('edit-mode-update').onclick = () => {
+        modal.remove();
+        startEditMode(item, 'update');
+      };
+      
+      document.getElementById('edit-mode-cancel').onclick = () => {
+        modal.remove();
+      };
+      
+      modal.onclick = (e) => {
+        if (e.target === modal) modal.remove();
+      };
+    };
+
+    // Open project detail modal
+    window.openProjectDetail = function(itemId) {
+      const item = allItems.find(i => i.__backendId === itemId);
+      if (!item) return;
+      
+      const descriptionHTML = getTranslatedText(item, 'description').replace(/\n/g, '<br>');
+      const typeColors = {
+        lab: '#4ade80',
+        incubator: '#fbbf24',
+        toolbox: '#8b5cf6'
+      };
+      const typeColor = typeColors[item.type] || '#4ade80';
+      
+      const modal = document.createElement('div');
+      modal.className = 'fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-6 overflow-y-auto';
+      modal.innerHTML = `
+        <div class="bg-[#141416] border border-[#2a2a2e] rounded-lg p-8 max-w-3xl w-full my-8">
+          <div class="flex items-start justify-between mb-6">
+            <div class="flex items-center gap-4">
+              <span class="text-4xl">${item.emoji || '📦'}</span>
+              <div>
+                <h3 class="font-mono-tech text-2xl font-bold mb-2" style="color: ${typeColor}">${getTranslatedText(item, 'title')}</h3>
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="status-badge bg-[#606060]/20 text-[#a0a0a0]">${item.type.toUpperCase()}</span>
+                  ${item.status ? `<span class="status-badge ${getStatusClass(item.status)}">${item.status}</span>` : ''}
+                  ${hasTranslation(item) ? `<span class="translation-badge font-mono-tech">🌐 EN/IT</span>` : ''}
+                </div>
+              </div>
+            </div>
+            <button onclick="this.closest('.fixed').remove()" class="text-[#606060] hover:text-[#e8e8e8] text-2xl leading-none transition-colors">
+              ×
+            </button>
+          </div>
+          
+          ${item.created_at ? `<div class="font-mono-tech text-sm mb-4"><span style="color: ${typeColor}; font-weight: 600;">[CREATED ${formatTimestamp(item.created_at)}]</span>${item.updated_at && item.updated_at !== item.created_at ? ` <span style="color: #fbbf24; font-weight: 600;">[UPDATED ${formatTimestamp(item.updated_at)}]</span>` : ''}</div>` : ''}
+          
+          <div class="text-[#c0c0c0] text-base leading-relaxed mb-6 log-content">${descriptionHTML}</div>
+          
+          ${item.tags ? `
+            <div class="mb-6">
+              <h4 class="font-mono-tech text-sm text-[#808080] mb-2">Tags:</h4>
+              <div class="flex flex-wrap gap-2">
+                ${item.tags.split(',').map(tag => `<span class="tool-badge font-mono-tech text-xs px-3 py-1 rounded">${tag.trim()}</span>`).join('')}
+              </div>
+            </div>
+          ` : ''}
+          
+          ${item.category ? `
+            <div class="mb-6">
+              <h4 class="font-mono-tech text-sm text-[#808080] mb-2">Category:</h4>
+              <span class="tool-badge font-mono-tech text-sm px-3 py-1 rounded">${item.category}</span>
+            </div>
+          ` : ''}
+          
+          <div class="flex gap-3 mt-8 pt-6 border-t border-[#2a2a2e]">
+            <button onclick="closeDetailAndEdit('${item.__backendId}')" class="admin-only flex-1 bg-[#4ade80] hover:bg-[#3bc96f] text-[#0a0a0b] font-mono-tech font-semibold px-6 py-3 rounded transition-colors" style="display: none;">
+              ✏️ Edit
+            </button>
+            <button onclick="this.closest('.fixed').remove()" class="flex-1 px-6 py-3 border border-[#2a2a2e] rounded text-[#a0a0a0] hover:text-[#e8e8e8] hover:border-[#4a4a4e] transition-colors font-mono-tech">
+              Close
+            </button>
+          </div>
+        </div>
+      `;
+      
+      document.body.appendChild(modal);
+      
+      modal.onclick = (e) => {
+        if (e.target === modal) modal.remove();
+      };
+    };
+    
+    window.closeDetailAndEdit = function(itemId) {
+      document.querySelector('.fixed.inset-0').remove();
+      navigateToPage('admin');
+      setTimeout(() => editItem(itemId), 300);
+    };
+    
+    function startEditMode(item, mode) {
+      editingItem = { ...item, editMode: mode };
+      document.getElementById('item-type').value = item.type;
+      document.getElementById('item-emoji').value = item.emoji || '';
+      document.getElementById('item-title').value = item.title || '';
+      document.getElementById('item-title-it').value = item.title_it || '';
+      
+      if (mode === 'modify') {
+        document.getElementById('item-description').value = item.description || '';
+        document.getElementById('item-description-it').value = item.description_it || '';
+        submitBtn.textContent = '✏️ Modify Entry';
+      } else {
+        document.getElementById('item-description').value = '';
+        document.getElementById('item-description-it').value = '';
+        submitBtn.textContent = '📝 Add Update';
+      }
+      
+      if (item.type === 'lab') {
+        document.getElementById('item-status').value = item.status || 'In Progress';
+        document.getElementById('item-tags').value = item.tags || '';
+      } else if (item.type === 'toolbox') {
+        document.getElementById('item-category').value = item.category || 'Software';
+      }
+      
+      updateFormFields();
+      updateAllCharCounters();
+      document.getElementById('add-item-form').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    window.deleteItem = async function(itemId) {
+      const itemElement = document.querySelector(`[data-item-id="${itemId}"]`);
+      if (!itemElement) return;
+      
+      const deleteBtn = itemElement.querySelector('button[onclick^="deleteItem"]');
+      const originalText = deleteBtn.textContent;
+      
+      if (deleteBtn.textContent === 'Delete') {
+        deleteBtn.textContent = 'Confirm?';
+        deleteBtn.classList.add('bg-[#ef4444]/20');
+        
+        setTimeout(() => {
+          if (deleteBtn.textContent === 'Confirm?') {
+            deleteBtn.textContent = originalText;
+            deleteBtn.classList.remove('bg-[#ef4444]/20');
+          }
+        }, 3000);
+        return;
+      }
+      
+      const item = allItems.find(i => i.__backendId === itemId);
+      if (!item) return;
+      
+      deleteBtn.disabled = true;
+      deleteBtn.textContent = 'Deleting...';
+      
+      const result = await window.dataSdk.delete(item);
+      if (result.isError) {
+        deleteBtn.textContent = 'Error!';
+        setTimeout(() => {
+          deleteBtn.textContent = originalText;
+          deleteBtn.disabled = false;
+        }, 2000);
+      }
+    };
+
+    // Admin form handling
+    const form = document.getElementById('add-item-form');
+    const typeSelect = document.getElementById('item-type');
+    const submitBtn = document.getElementById('submit-btn');
+    const cancelBtn = document.getElementById('cancel-btn');
+
+    function updateFormFields() {
+      const type = typeSelect.value;
+      const labFields = document.getElementById('lab-fields');
+      const toolboxFields = document.getElementById('toolbox-fields');
+      
+      if (type === 'lab') {
+        labFields.style.display = 'block';
+        toolboxFields.style.display = 'none';
+      } else if (type === 'toolbox') {
+        labFields.style.display = 'none';
+        toolboxFields.style.display = 'block';
+      } else {
+        labFields.style.display = 'none';
+        toolboxFields.style.display = 'none';
+      }
+    }
+
+    typeSelect.addEventListener('change', updateFormFields);
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      // Validate at least one language is filled
+      const titleEN = document.getElementById('item-title').value.trim();
+      const descEN = document.getElementById('item-description').value.trim();
+      const titleIT = document.getElementById('item-title-it').value.trim();
+      const descIT = document.getElementById('item-description-it').value.trim();
+      
+      if (!titleEN && !titleIT) {
+        const message = document.createElement('div');
+        message.className = 'bg-[#fbbf24]/20 border border-[#fbbf24] text-[#fbbf24] rounded-lg p-4 mb-4 font-mono-tech text-sm';
+        message.textContent = '⚠️ Fill at least one title (English or Italian) / Compila almeno un titolo (inglese o italiano)';
+        form.insertBefore(message, form.firstChild);
+        setTimeout(() => message.remove(), 5000);
+        return;
+      }
+      
+      if (!descEN && !descIT) {
+        const message = document.createElement('div');
+        message.className = 'bg-[#fbbf24]/20 border border-[#fbbf24] text-[#fbbf24] rounded-lg p-4 mb-4 font-mono-tech text-sm';
+        message.textContent = '  ️ Fill at least one description (English or Italian) / Compila almeno una descrizione (inglese o italiano)';
+        form.insertBefore(message, form.firstChild);
+        setTimeout(() => message.remove(), 5000);
+        return;
+      }
+      
+      if (allItems.length >= 999 && !editingItem) {
+        const message = document.createElement('div');
+        message.className = 'bg-[#ef4444]/20 border border-[#ef4444] text-[#ef4444] rounded-lg p-4 mb-4 font-mono-tech text-sm';
+        message.textContent = '⚠️ Maximum limit of 999 items reached. Please delete some items first.';
+        form.insertBefore(message, form.firstChild);
+        setTimeout(() => message.remove(), 5000);
+        return;
+      }
+      
+      submitBtn.disabled = true;
+      submitBtn.textContent = editingItem ? 'Updating...' : 'Adding...';
+      
+      const now = new Date().toISOString();
+      const itemData = {
+        type: document.getElementById('item-type').value,
+        emoji: document.getElementById('item-emoji').value || '📦',
+        title: titleEN || titleIT,
+        description: descEN || descIT,
+        title_it: titleIT,
+        description_it: descIT,
+        created_at: editingItem ? editingItem.created_at : now,
+        updated_at: now
+      };
+      
+      if (itemData.type === 'lab') {
+        itemData.status = document.getElementById('item-status').value;
+        itemData.tags = document.getElementById('item-tags').value;
+      } else if (itemData.type === 'toolbox') {
+        itemData.category = document.getElementById('item-category').value;
+      }
+      
+      let result;
+      if (editingItem) {
+        const mode = editingItem.editMode;
+        const updateData = { ...editingItem, ...itemData };
+        
+        if (mode === 'update') {
+          // Append with timestamp
+          const timestamp = new Date().toISOString();
+          const dateStr = new Date(timestamp).toLocaleString('en-GB', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+          });
+          
+          const separator = '\n\n---\n\n';
+          const updateMarker = `<span style="color: #fbbf24; font-weight: 600;">[UPDATE ${dateStr}]</span>\n\n`;
+          
+          if (descEN) {
+            updateData.description = (editingItem.description || '') + separator + updateMarker + descEN;
+          }
+          if (descIT) {
+            updateData.description_it = (editingItem.description_it || '') + separator + updateMarker + descIT;
+          }
+        }
+        
+        delete updateData.editMode;
+        result = await window.dataSdk.update(updateData);
+      } else {
+        result = await window.dataSdk.create(itemData);
+      }
+      
+      if (result.isOk) {
+        form.reset();
+        editingItem = null;
+        submitBtn.textContent = 'Add Item';
+        updateFormFields();
+        updateAllCharCounters();
+        
+        // Show success message
+        const successMsg = document.createElement('div');
+        successMsg.className = 'bg-[#4ade80]/20 border border-[#4ade80] text-[#4ade80] rounded-lg p-4 mb-4 font-mono-tech text-sm';
+        successMsg.textContent = '✅ Item saved successfully!';
+        form.insertBefore(successMsg, form.firstChild);
+        setTimeout(() => successMsg.remove(), 3000);
+      } else {
+        // Show detailed error message
+        const errorMsg = document.createElement('div');
+        errorMsg.className = 'bg-[#ef4444]/20 border border-[#ef4444] text-[#ef4444] rounded-lg p-4 mb-4 font-mono-tech text-sm';
+        errorMsg.innerHTML = `
+          <div class="font-bold mb-2">❌ Error saving item</div>
+          <div class="text-xs">${result.error?.message || 'Unknown error occurred'}</div>
+          <div class="text-xs mt-2 text-[#fbbf24]">💡 Try reducing text length or check your connection</div>
+        `;
+        form.insertBefore(errorMsg, form.firstChild);
+        setTimeout(() => errorMsg.remove(), 8000);
+        
+        submitBtn.textContent = 'Error!';
+        setTimeout(() => {
+          submitBtn.textContent = editingItem ? 'Update Item' : 'Add Item';
+        }, 2000);
+      }
+      
+      submitBtn.disabled = false;
+    });
+
+    cancelBtn.addEventListener('click', () => {
+      form.reset();
+      editingItem = null;
+      submitBtn.textContent = 'Add Item';
+      updateFormFields();
+      updateAllCharCounters();
+    });
+
+    // Character counter functionality
+    function updateCharCounter(inputId, counterId, maxLength) {
+      const input = document.getElementById(inputId);
+      const counter = document.getElementById(counterId);
+      if (input && counter) {
+        const length = input.value.length;
+        counter.textContent = length;
+        const counterElement = document.getElementById(counterId.replace('-count', '-counter'));
+        if (counterElement) {
+          if (length > maxLength * 0.9) {
+            counterElement.classList.add('text-[#fbbf24]');
+          } else if (length >= maxLength) {
+            counterElement.classList.add('text-[#ef4444]');
+          } else {
+            counterElement.classList.remove('text-[#fbbf24]', 'text-[#ef4444]');
+            counterElement.classList.add('text-[#606060]');
+          }
+        }
+      }
+    }
+
+    function updateAllCharCounters() {
+      updateCharCounter('item-title', 'title-en-count', 200);
+      updateCharCounter('item-description', 'desc-en-count', 5000);
+      updateCharCounter('item-title-it', 'title-it-count', 200);
+      updateCharCounter('item-description-it', 'desc-it-count', 5000);
+    }
+
+    // Add event listeners for character counting
+    ['item-title', 'item-description', 'item-title-it', 'item-description-it'].forEach(id => {
+      const element = document.getElementById(id);
+      if (element) {
+        element.addEventListener('input', updateAllCharCounters);
+      }
+    });
+
+    // Filter buttons
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentFilter = btn.getAttribute('data-filter');
+        renderAdminList();
+      });
+    });
+
+    // Event listeners
+    document.getElementById('lang-toggle').addEventListener('click', toggleLanguage);
+    document.getElementById('mobile-menu-btn').addEventListener('click', toggleMobileMenu);
+    document.getElementById('site-title-nav').addEventListener('click', handleLogoClick);
+    
+    // Initialize
+    checkAdminSession();
+    initDataSDK();
+    updateLanguage(); // Initialize language on page load
+
+    // Element SDK initialization
+    if (window.elementSdk) {
+      window.elementSdk.init({
+        defaultConfig,
+        onConfigChange: async (config) => {
+          // Update site title
+          const navTitle = document.getElementById('site-title-nav');
+          if (navTitle && config.site_title) {
+            const parts = config.site_title.split('.');
+            if (parts.length > 1) {
+              navTitle.innerHTML = `<span class="text-[#4ade80]">&gt;</span> ${parts[0]}<span class="text-[#4ade80]">.${parts[1]}</span>`;
+            }
+          }
+          
+          // Update hero tagline
+          const heroTagline = document.getElementById('hero-tagline');
+          if (heroTagline && config.hero_tagline) {
+            heroTagline.textContent = config.hero_tagline;
+          }
+          
+          // Update pact title
+          const pactTitle = document.getElementById('pact-title');
+          if (pactTitle && config.pact_title) {
+            pactTitle.textContent = config.pact_title;
+          }
+          
+          // Apply colors
+          document.documentElement.style.setProperty('--bg-primary', config.background_color || defaultConfig.background_color);
+          document.documentElement.style.setProperty('--bg-secondary', config.surface_color || defaultConfig.surface_color);
+          document.documentElement.style.setProperty('--text-primary', config.text_color || defaultConfig.text_color);
+          document.documentElement.style.setProperty('--accent-green', config.accent_primary || defaultConfig.accent_primary);
+          document.documentElement.style.setProperty('--accent-amber', config.accent_secondary || defaultConfig.accent_secondary);
+        },
+        mapToCapabilities: (config) => ({
+          recolorables: [
+            {
+              get: () => config.background_color || defaultConfig.background_color,
+              set: (value) => window.elementSdk.setConfig({ background_color: value })
+            },
+            {
+              get: () => config.surface_color || defaultConfig.surface_color,
+              set: (value) => window.elementSdk.setConfig({ surface_color: value })
+            },
+            {
+              get: () => config.text_color || defaultConfig.text_color,
+              set: (value) => window.elementSdk.setConfig({ text_color: value })
+            },
+            {
+              get: () => config.accent_primary || defaultConfig.accent_primary,
+              set: (value) => window.elementSdk.setConfig({ accent_primary: value })
+            },
+            {
+              get: () => config.accent_secondary || defaultConfig.accent_secondary,
+              set: (value) => window.elementSdk.setConfig({ accent_secondary: value })
+            }
+          ],
+          borderables: [],
+          fontEditable: undefined,
+          fontSizeable: undefined
+        }),
+        mapToEditPanelValues: (config) => new Map([
+          ['site_title', config.site_title || defaultConfig.site_title],
+          ['hero_tagline', config.hero_tagline || defaultConfig.hero_tagline],
+          ['pact_title', config.pact_title || defaultConfig.pact_title]
+        ])
+      });
+    }
