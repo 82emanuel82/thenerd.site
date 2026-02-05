@@ -1,0 +1,27 @@
+{
+  "items": [
+    {
+      "section": "LAB",
+      "slug": "the-nerd-site",
+      "title": "The Nerd.site",
+      "summary": "Learning in public. Breaking things. Taking notes. diario pubblico di un nerd senza competenze che \" ci prova\"",
+      "tags": [
+        "html",
+        "css",
+        "ia",
+        "md",
+        "markdown"
+      ],
+      "status": "work",
+      "createdAt": "2026-02-04",
+      "updatedAt": "2026-02-05",
+      "cover": "",
+      "pathIndex": "content/LAB/the-nerd-site/index.md",
+      "entries": [
+        "2026-02-05",
+        "2026-02-04"
+      ],
+      "links": []
+    }
+  ]
+}

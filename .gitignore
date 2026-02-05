@@ -1,0 +1,18 @@
+# builder (NON pubblicare)
+thenerdbuilder/
+thenerd-builder/
+the-nerd-builder/
+
+# node / build
+**/node_modules/
+**/dist/
+**/.vite/
+**/.cache/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.log
+
+# zip / export
+*.zip
