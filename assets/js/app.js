@@ -3,6 +3,52 @@
   const qsa = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
   const TABS = ["home", "lab", "incubator", "toolbox", "who", "admin"];
+  // --- language (default IT) ---
+  let currentLanguage = "it";
+
+    function toggleMobileMenu() {
+    const menu = document.getElementById("mobile-menu");
+    if (!menu) return;
+    menu.classList.toggle("hidden");
+  }
+
+  function closeMobileMenu() {
+    const menu = document.getElementById("mobile-menu");
+    if (!menu) return;
+    menu.classList.add("hidden");
+  }
+
+
+  function updateLanguageUI() {
+    const btn = document.getElementById("lang-toggle");
+    if (!btn) return;
+
+    // testo bottone
+    btn.textContent = currentLanguage === "en" ? "EN / IT" : "IT / EN";
+
+    // se hai elementi testuali con id (come nelle prime versioni), li aggiorno senza rompere nulla
+    const heroTagline = document.getElementById("hero-tagline");
+    const heroNote = document.getElementById("hero-note");
+
+    if (heroTagline) {
+      heroTagline.textContent =
+        currentLanguage === "en"
+          ? "Learning in public. Breaking things. Taking notes."
+          : "Imparare in pubblico. Rompere le cose. Prendere appunti.";
+    }
+
+    if (heroNote) {
+      heroNote.textContent =
+        currentLanguage === "en"
+          ? "// This site is itself a project in progress"
+          : "// Questo sito è esso stesso un progetto in corso";
+    }
+  }
+
+  function toggleLanguage() {
+    currentLanguage = currentLanguage === "en" ? "it" : "en";
+    updateLanguageUI();
+  }
 
   // --- utils ---
   function esc(s) {
@@ -107,6 +153,8 @@
         if (!TABS.includes(tab)) return;
         e.preventDefault();
         location.hash = `#${tab}`;
+        closeMobileMenu();
+
       });
     });
 
@@ -464,6 +512,16 @@
   removeAdminUI();
   wireNav();
   loadAndRenderContent().catch(showError);
+
+    const mobileBtn = document.getElementById("mobile-menu-btn");
+  if (mobileBtn) mobileBtn.addEventListener("click", toggleMobileMenu);
+
+
+    // language init + click
+  updateLanguageUI();
+  const langBtn = document.getElementById("lang-toggle");
+  if (langBtn) langBtn.addEventListener("click", toggleLanguage);
+
 
   // Click handler: open aggregated project view
   document.addEventListener("click", (e) => {
