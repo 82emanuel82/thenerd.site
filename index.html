@@ -9,7 +9,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@300;400;500;600&amp;display=swap" rel="stylesheet">
- 
+ <!-- Markdown renderer (browser) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/markdown-it@14/dist/markdown-it.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
  </head>
  <body class="h-full font-body bg-[#0a0a0b] text-[#e8e8e8] overflow-auto">
   <div id="app" class="min-h-full w-full relative scanline-effect"><!-- Navigation -->
@@ -241,6 +245,29 @@
     </div>
    </footer>
   </div>
+  <!-- Markdown Viewer Modal -->
+<div id="md-modal" class="hidden fixed inset-0 z-[100]">
+  <div id="md-backdrop" class="absolute inset-0 bg-black/70"></div>
+
+  <div class="relative max-w-5xl mx-auto mt-24 mb-16 px-4">
+    <div class="bg-[#0a0a0b] border border-[#2a2a2e] rounded-xl shadow-xl overflow-hidden">
+      <div class="flex items-center justify-between px-5 py-4 border-b border-[#2a2a2e]">
+        <div class="min-w-0">
+          <div class="font-mono-tech text-xs text-[#606060]" id="md-kicker">/content</div>
+          <div class="font-mono-tech text-lg font-semibold truncate" id="md-title">Loading…</div>
+        </div>
+        <button id="md-close" class="font-mono-tech text-xs px-3 py-2 border border-[#2a2a2e] rounded hover:border-[#4ade80] transition-colors">
+          Close
+        </button>
+      </div>
+
+      <div class="px-5 py-6">
+        <div id="md-body" class="md-body prose prose-invert max-w-none"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
  <script src="assets/js/app.js"></script> 
  <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9c5f285372ca0e02',t:'MTc2OTc1NzExMC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
