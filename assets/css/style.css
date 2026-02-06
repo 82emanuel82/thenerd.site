@@ -239,3 +239,44 @@
 #md-body code {
   font-family: ui-monospace, SFMono-R
 
+/* Terminal vibe: monospazio vero */
+:root{
+  --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", "Courier New", monospace;
+}
+
+/* usa questo per tutte le “info” */
+.font-mono-tech{
+  font-family: var(--mono) !important;
+  letter-spacing: 0.02em;
+}
+
+/* opzionale: kicker, meta e badge più “terminal” */
+.status-badge, .tool-badge{
+  font-family: var(--mono) !important;
+}
+
+/* ================================
+   FORCE "terminal" font inside modal markdown
+   ================================ */
+
+:root{
+  --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", "Courier New", monospace;
+}
+
+/* tutto il contenuto markdown in terminale */
+#md-body,
+#md-body * {
+  font-family: var(--mono) !important;
+  letter-spacing: 0.02em;
+}
+
+/* titoli un filo più “terminal”: meno serif, più asciutti */
+#md-body h1 { font-size: 36px; font-weight: 800; }
+#md-body h2 { font-size: 24px; font-weight: 800; }
+#md-body h3 { font-size: 18px; font-weight: 800; }
+#md-body p, #md-body li { font-size: 15px; }
+
+/* mantieni buona leggibilità */
+#md-body { line-height: 1.85; }

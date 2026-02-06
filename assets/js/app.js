@@ -336,15 +336,24 @@
   }
 
   function renderProjects(containerId, projects) {
-    const host = qs(`#${containerId}`);
-    if (!host) return;
+  const host = qs(`#${containerId}`);
+  if (!host) return;
 
-    if (!projects.length) {
-      host.innerHTML = "";
-      return;
-    }
-    host.innerHTML = projects.map(projectCardHTML).join("");
+  // prova a trovare un "empty state" vicino al container (stessa section)
+  // pattern: un elemento con id "<containerId>-empty" oppure un blocco con data-empty-for="<containerId>"
+  const emptyById = qs(`#${containerId}-empty`);
+  const emptyByData = qs(`[data-empty-for="${containerId}"]`);
+  const emptyEl = emptyById || emptyByData;
+
+  if (!projects.length) {
+    host.innerHTML = "";
+    if (emptyEl) emptyEl.style.display = "";
+    return;
   }
+
+  if (emptyEl) emptyEl.style.display = "none";
+  host.innerHTML = projects.map(projectCardHTML).join("");
+}
 
   function renderRecentActivity(recentItems) {
     const list = qs("#recent-activity-list");
