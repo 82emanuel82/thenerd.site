@@ -22,6 +22,27 @@
         "2026-02-04"
       ],
       "links": []
+    },
+    {
+      "section": "LAB",
+      "slug": "the-nerd-builder",
+      "title": "The Nerd Builder",
+      "summary": "strumento Fai Da Te per creare , aggiornare gestire e rendere comprensibile I MARKDOWN questi sconosciuti",
+      "tags": [
+        "md",
+        "react",
+        "vite",
+        "jsx"
+      ],
+      "status": "work",
+      "createdAt": "2026-02-06",
+      "updatedAt": "2026-02-06",
+      "cover": "",
+      "pathIndex": "content/LAB/the-nerd-builder/index.md",
+      "entries": [
+        "2026-02-06"
+      ],
+      "links": []
     }
   ]
 }
