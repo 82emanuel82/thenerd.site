@@ -25,6 +25,30 @@
     return res.text();
   }
 
+  // --- helpers for project aggregation ---
+  function buildProjectIndexPath(section, slug) {
+    return `./content/${section}/${slug}/index.md`;
+  }
+
+  function buildProjectEntryPath(section, slug, date) {
+    return `./content/${section}/${slug}/entries/${date}.md`;
+  }
+
+  async function getContentIndex() {
+    if (window.__CONTENT_INDEX_CACHE__) return window.__CONTENT_INDEX_CACHE__;
+    const data = await fetchJSON("./content/index.json");
+    window.__CONTENT_INDEX_CACHE__ = data;
+    return data;
+  }
+
+  function findProject(data, section, slug) {
+    const items = Array.isArray(data.items) ? data.items : [];
+    return items.find(p =>
+      String(p.section || "").toUpperCase() === String(section || "").toUpperCase() &&
+      String(p.slug || "") === String(slug || "")
+    );
+  }
+
   function sortByUpdatedDesc(a, b) {
     return String(b.updatedAt || "").localeCompare(String(a.updatedAt || ""));
   }
@@ -51,7 +75,7 @@
 
   function parseHashParams() {
     const raw = (location.hash || "").replace(/^#/, "");
-    const parts = raw.split("&").slice(1); // everything after tab
+    const parts = raw.split("&").slice(1);
     const params = {};
     for (const p of parts) {
       const [k, v] = p.split("=");
@@ -82,7 +106,7 @@
         const tab = href.replace(/^#/, "");
         if (!TABS.includes(tab)) return;
         e.preventDefault();
-        location.hash = `#${tab}`; // clear params when switching tab
+        location.hash = `#${tab}`;
       });
     });
 
@@ -94,16 +118,18 @@
     const tab = getHashTab();
     showTab(tab);
 
-    // if read=... in hash, open modal
     const params = parseHashParams();
-    if (params.read) {
+
+    if (params.project) {
+      const [section, slug] = params.project.split("/");
+      openProject(section, slug);
+    } else if (params.read) {
       openMarkdown(params.read, params.title || "");
     } else {
       closeMarkdown(true);
     }
   }
 
- 
   // --- modal viewer ---
   const modal = () => qs("#md-modal");
   const modalTitle = () => qs("#md-title");
@@ -113,17 +139,27 @@
   function ensureModalWired() {
     const closeBtn = qs("#md-close");
     const backdrop = qs("#md-backdrop");
+
     if (closeBtn && !closeBtn.__wired) {
       closeBtn.__wired = true;
-      closeBtn.addEventListener("click", () => setHashParam("read", null));
+      closeBtn.addEventListener("click", () => {
+        setHashParam("read", null);
+        setHashParam("project", null);
+      });
     }
+
     if (backdrop && !backdrop.__wired) {
       backdrop.__wired = true;
-      backdrop.addEventListener("click", () => setHashParam("read", null));
+      backdrop.addEventListener("click", () => {
+        setHashParam("read", null);
+        setHashParam("project", null);
+      });
     }
+
     window.addEventListener("keydown", (e) => {
       if (e.key === "Escape" && !modal()?.classList.contains("hidden")) {
         setHashParam("read", null);
+        setHashParam("project", null);
       }
     });
   }
@@ -140,36 +176,33 @@
 
     try {
       const text = await fetchText(path);
+
       if (!window.markdownit) {
-  throw new Error("markdown-it non disponibile (CDN non caricato)");
-}
-
-const md = window.markdownit({
-  html: false,
-  linkify: true,
-  typographer: true,
-  highlight: (str, lang) => {
-    try {
-      if (lang && window.hljs && hljs.getLanguage(lang)) {
-        return `<pre><code class="hljs language-${esc(lang)}">${
-          hljs.highlight(str, { language: lang }).value
-        }</code></pre>`;
+        throw new Error("markdown-it non disponibile (CDN non caricato)");
       }
-    } catch {}
-    return `<pre><code class="hljs">${esc(str)}</code></pre>`;
-  }
-});
 
-modalBody().innerHTML = md.render(text);
+      const mdFactory = window.markdownit?.default || window.markdownit;
+      const md = mdFactory({
+        html: false,
+        linkify: true,
+        typographer: true,
+        highlight: (str, lang) => {
+          try {
+            if (lang && window.hljs && hljs.getLanguage(lang)) {
+              return `<pre><code class="hljs language-${esc(lang)}">${hljs.highlight(str, { language: lang }).value}</code></pre>`;
+            }
+          } catch {}
+          return `<pre><code class="hljs">${esc(str)}</code></pre>`;
+        }
+      });
 
+      modalBody().innerHTML = md.render(text);
 
-      // nice: highlight any leftover blocks (some md configs output <pre><code>)
       if (window.hljs) {
         qsa("#md-body pre code").forEach(block => hljs.highlightElement(block));
       }
 
       if (!title) {
-        // take first heading as title if present
         const h1 = qs("#md-body h1");
         if (h1) modalTitle().textContent = h1.textContent.trim();
         else modalTitle().textContent = path.split("/").pop();
@@ -184,46 +217,123 @@ modalBody().innerHTML = md.render(text);
     }
   }
 
+  async function openProject(section, slug) {
+    ensureModalWired();
+    const m = modal();
+    if (!m) return;
+
+    m.classList.remove("hidden");
+
+    const data = await getContentIndex();
+    const project = findProject(data, section, slug);
+
+    if (!project) {
+      modalKicker().textContent = `./content/${section}/${slug}/`;
+      modalTitle().textContent = "Project not found";
+      modalBody().innerHTML = `<div class="font-mono-tech text-sm text-red-300">Progetto non trovato in content/index.json</div>`;
+      return;
+    }
+
+    const title = project.title || project.slug;
+    modalKicker().textContent = `./content/${project.section}/${project.slug}/`;
+    modalTitle().textContent = title;
+    modalBody().innerHTML = `<div class="font-mono-tech text-sm text-[#606060]">Loading project…</div>`;
+
+    try {
+      const indexPath = project.pathIndex || buildProjectIndexPath(project.section, project.slug);
+      const indexMd = await fetchText(indexPath);
+
+      const entries = Array.isArray(project.entries) ? project.entries.slice() : [];
+      entries.reverse(); // ordine crescente: vecchio → nuovo
+
+      const entryTexts = [];
+      for (const d of entries) {
+        const p = buildProjectEntryPath(project.section, project.slug, d);
+        const t = await fetchText(p);
+        entryTexts.push({ date: d, text: t });
+      }
+
+      let merged = "";
+      merged += indexMd.trim();
+      merged += `\n\n---\n\n`;
+      for (const e of entryTexts) {
+        merged += `# ${e.date}\n\n`;
+        merged += e.text.trim();
+        merged += `\n\n---\n\n`;
+      }
+
+      if (!window.markdownit) throw new Error("markdown-it non disponibile");
+
+      const mdFactory = window.markdownit?.default || window.markdownit;
+      const md = mdFactory({
+        html: false,
+        linkify: true,
+        typographer: true,
+        highlight: (str, lang) => {
+          try {
+            if (lang && window.hljs && hljs.getLanguage(lang)) {
+              return `<pre><code class="hljs language-${esc(lang)}">${hljs.highlight(str, { language: lang }).value}</code></pre>`;
+            }
+          } catch {}
+          return `<pre><code class="hljs">${esc(str)}</code></pre>`;
+        }
+      });
+
+      modalBody().innerHTML = md.render(merged);
+
+      if (window.hljs) {
+        qsa("#md-body pre code").forEach(block => hljs.highlightElement(block));
+      }
+
+    } catch (err) {
+      console.error(err);
+      modalBody().innerHTML = `<div class="font-mono-tech text-sm text-red-300">Errore nel caricamento: ${esc(err.message || err)}</div>`;
+      modalTitle().textContent = "Error";
+    }
+  }
+
   function closeMarkdown(silent = false) {
     const m = modal();
     if (!m) return;
     m.classList.add("hidden");
-    if (!silent) setHashParam("read", null);
+    if (!silent) {
+      setHashParam("read", null);
+      setHashParam("project", null);
+    }
   }
 
   // --- UI renderers (cards) ---
   function projectCardHTML(p) {
-  const tags = Array.isArray(p.tags) ? p.tags : [];
-  const status = (p.status || "").toUpperCase();
-  const updated = p.updatedAt || "";
-  const title = p.title || p.slug;
+    const tags = Array.isArray(p.tags) ? p.tags : [];
+    const status = (p.status || "").toUpperCase();
+    const updated = p.updatedAt || "";
+    const title = p.title || p.slug;
 
-  const path = p.pathIndex || "";
-  const kicker = `${(p.section || "").toUpperCase()} / ${p.slug}`;
+    const kicker = `${(p.section || "").toUpperCase()} / ${p.slug}`;
+    const projectKey = `${String(p.section || "").toUpperCase()}/${p.slug}`;
 
-  return `
-    <div
-      class="project-card block bg-[#141416] rounded-lg p-5 hover:border-[#4ade80] transition-colors border border-[#2a2a2e] cursor-pointer"
-      data-md="${esc(path)}"
-      data-title="${esc(title)}"
-    >
-      <div class="flex items-start justify-between gap-4">
-        <div class="min-w-0">
-          <div class="font-mono-tech text-xs text-[#606060]">${esc(kicker)}</div>
-          <div class="font-mono-tech text-lg font-semibold mt-1 truncate">${esc(title)}</div>
-          <div class="text-sm text-[#a0a0a0] mt-2">${esc(p.summary || "")}</div>
+    return `
+      <div
+        class="project-card block bg-[#141416] rounded-lg p-5 hover:border-[#4ade80] transition-colors border border-[#2a2a2e] cursor-pointer"
+        data-project="${esc(projectKey)}"
+        data-title="${esc(title)}"
+      >
+        <div class="flex items-start justify-between gap-4">
+          <div class="min-w-0">
+            <div class="font-mono-tech text-xs text-[#606060]">${esc(kicker)}</div>
+            <div class="font-mono-tech text-lg font-semibold mt-1 truncate">${esc(title)}</div>
+            <div class="text-sm text-[#a0a0a0] mt-2">${esc(p.summary || "")}</div>
+          </div>
+          ${status ? `<span class="status-badge border border-[#2a2a2e] text-[#a0a0a0]">${esc(status)}</span>` : ""}
         </div>
-        ${status ? `<span class="status-badge border border-[#2a2a2e] text-[#a0a0a0]">${esc(status)}</span>` : ""}
-      </div>
 
-      <div class="mt-4 flex flex-wrap gap-2 items-center">
-        ${updated ? `<span class="font-mono-tech text-xs text-[#606060]">updated: ${esc(updated)}</span>` : ""}
-        ${tags.slice(0, 6).map(t => `<span class="tool-badge font-mono-tech text-xs px-2 py-1 rounded">${esc(t)}</span>`).join("")}
+        <div class="mt-4 flex flex-wrap gap-2 items-center">
+          ${updated ? `<span class="font-mono-tech text-xs text-[#606060]">updated: ${esc(updated)}</span>` : ""}
+          ${tags.slice(0, 6).map(t => `<span class="tool-badge font-mono-tech text-xs px-2 py-1 rounded">${esc(t)}</span>`).join("")}
+        </div>
       </div>
-    </div>
-  `;
-}
-
+    `;
+  }
 
   function renderProjects(containerId, projects) {
     const host = qs(`#${containerId}`);
@@ -255,21 +365,23 @@ modalBody().innerHTML = md.render(text);
       const title = it.projectTitle || it.slug || "Untitled";
       const sub = `${it.type ? it.type : "entry"}${it.entryTitle ? " : " + it.entryTitle : ""}`;
       const date = it.date || "";
-      const path = it.entryPath;
+      const projectKey = `${String(it.section || "").toUpperCase()}/${it.slug}`;
 
       return `
-        <a href="#${getHashTab()}&read=${encodeURIComponent(path)}&title=${encodeURIComponent(title)}"
-           class="block bg-[#141416] border border-[#2a2a2e] rounded-lg p-5 hover:border-[#4ade80] transition-colors">
+        <div
+          class="block bg-[#141416] border border-[#2a2a2e] rounded-lg p-5 hover:border-[#4ade80] transition-colors cursor-pointer"
+          data-recent-project="${esc(projectKey)}"
+          data-title="${esc(title)}"
+        >
           <div class="font-mono-tech text-xs text-[#606060]">${esc((it.section || "").toUpperCase())} • ${esc(date)} ${it.time ? "• " + esc(it.time) : ""}</div>
           <div class="font-mono-tech text-lg font-semibold mt-1">${esc(title)}</div>
           <div class="text-sm text-[#a0a0a0] mt-2">${esc(sub)}</div>
-        </a>
+        </div>
       `;
     }).join("");
   }
 
   function parseLatestEntryMeta(mdText) {
-    // expected: "## 08:14 — note : Title" (dash can be — or -)
     const m = mdText.match(/^##\s+(\d{2}:\d{2})\s+[—-]\s+([a-zA-Z0-9_-]+)\s*:\s*(.+)$/m);
     if (!m) return null;
     return { time: m[1], type: m[2], title: m[3].trim() };
@@ -288,16 +400,15 @@ modalBody().innerHTML = md.render(text);
 
     Object.values(bySection).forEach(arr => arr.sort(sortByUpdatedDesc));
 
-    // Correct containers from your HTML:
     renderProjects("lab-projects-list", bySection.LAB);
     renderProjects("incubator-ideas-list", bySection.INCUBATOR);
     renderProjects("toolbox-categories", bySection.TOOLBOX);
 
-    // Recent activity: build from last entry of each project
+    // Recent activity: last entry per project (newest)
     const recent = [];
     const tasks = projects.map(async (p) => {
       const entries = Array.isArray(p.entries) ? p.entries : [];
-      const lastDate = entries.length ? entries[0] : null; // builder stores newest-first in your sample
+      const lastDate = entries.length ? entries[0] : null; // newest-first
       if (!lastDate) return;
 
       const entryPath = `./content/${p.section}/${p.slug}/entries/${lastDate}.md`;
@@ -345,17 +456,25 @@ modalBody().innerHTML = md.render(text);
   wireNav();
   loadAndRenderContent().catch(showError);
 
-document.addEventListener("click", (e) => {
-  const card = e.target.closest("[data-md]");
-  if (!card) return;
+  // Click handler: open aggregated project view
+  document.addEventListener("click", (e) => {
+    const proj = e.target.closest("[data-project]");
+    if (proj) {
+      const projectKey = proj.getAttribute("data-project");
+      const title = proj.getAttribute("data-title") || "";
+      setHashParam("title", title);
+      setHashParam("read", null);
+      setHashParam("project", projectKey);
+      return;
+    }
 
-  const path = card.getAttribute("data-md");
-  const title = card.getAttribute("data-title") || "";
-
-  if (!path) return;
-
-  setHashParam("title", title);
-  setHashParam("read", path);
-});
-
+    const recent = e.target.closest("[data-recent-project]");
+    if (recent) {
+      const projectKey = recent.getAttribute("data-recent-project");
+      const title = recent.getAttribute("data-title") || "";
+      setHashParam("title", title);
+      setHashParam("read", null);
+      setHashParam("project", projectKey);
+    }
+  });
 })();

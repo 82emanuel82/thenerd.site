@@ -158,3 +158,84 @@
 @view-transition {
   navigation: auto;
 }
+
+/* Modal body scroll */
+#md-body {
+  max-height: 70vh;
+  overflow-y: auto;
+  padding-right: 6px; /* piccolo respiro per la scrollbar */
+}
+
+/* ================================
+   Markdown Builder-like Theme
+   ================================ */
+
+#md-body {
+  /* colonna leggibile */
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 22px 24px;
+
+  /* testo */
+  color: #e6e6e6;
+  font-size: 16px;
+  line-height: 1.85;
+
+  /* scroll già presente: lascialo, ma miglioriamo l'aspetto */
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+/* Titoli */
+#md-body h1,
+#md-body h2,
+#md-body h3,
+#md-body h4 {
+  color: #ffffff;
+  font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  margin: 0.9em 0 0.45em;
+}
+
+#md-body h1 { font-size: 44px; margin-top: 0.25em; }
+#md-body h2 { font-size: 28px; margin-top: 1.2em; }
+#md-body h3 { font-size: 20px; margin-top: 1.0em; }
+#md-body h4 { font-size: 18px; margin-top: 1.0em; }
+
+/* Paragrafi e liste */
+#md-body p { margin: 0.85em 0; }
+#md-body ul, #md-body ol { margin: 0.85em 0 0.85em 1.2em; }
+#md-body li { margin: 0.35em 0; }
+#md-body li::marker { color: #a7f3d0; }
+
+/* Separatori come nel builder */
+#md-body hr {
+  border: 0;
+  border-top: 1px solid rgba(255,255,255,0.14);
+  margin: 1.6em 0;
+}
+
+/* Link */
+#md-body a {
+  color: #4ade80;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+#md-body a:hover { opacity: 0.9; }
+
+/* Blockquote */
+#md-body blockquote {
+  margin: 1.1em 0;
+  padding: 0.75em 1em;
+  border-left: 3px solid #4ade80;
+  background: rgba(255,255,255,0.04);
+  color: rgba(255,255,255,0.92);
+  border-radius: 10px;
+}
+
+/* Inline code */
+#md-body code {
+  font-family: ui-monospace, SFMono-R
+
