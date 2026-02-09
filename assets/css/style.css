@@ -206,8 +206,9 @@
 
 /* Paragrafi e liste */
 #md-body p { margin: 0.85em 0; }
-#md-body ul, #md-body ol { margin: 0.85em 0 0.85em 1.2em; }
-#md-body li { margin: 0.35em 0; }
+#md-body ul { margin: 0.85em 0 0.85em 1.2em; list-style: disc; }
+#md-body ol { margin: 0.85em 0 0.85em 1.2em; list-style: decimal; }
+#md-body li { margin: 0.35em 0; } 
 #md-body li::marker { color: #a7f3d0; }
 
 /* Separatori come nel builder */

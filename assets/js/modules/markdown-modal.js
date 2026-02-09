@@ -1,5 +1,6 @@
 import { qs, qsa, esc, fetchText } from './utils.js';
 import { setHashParam } from './routing.js';
+import { createMarkdownRenderer } from '../../shared/markdown-renderer.js';
 
 // --- Modal helper getters ---
 const modal = () => qs("#md-modal");
@@ -9,6 +10,19 @@ const modalBody = () => qs("#md-body");
 
 // --- Content index cache ---
 let _contentIndexCache = null;
+let _markdownRenderer = null;
+
+// Initialize markdown renderer (uses CDN libraries)
+async function getMarkdownRenderer() {
+  if (_markdownRenderer) return _markdownRenderer;
+  
+  if (!window.markdownit) {
+    throw new Error("markdown-it non disponibile (CDN non caricato)");
+  }
+  
+  _markdownRenderer = await createMarkdownRenderer(window.markdownit, window.hljs);
+  return _markdownRenderer;
+}
 
 export async function getContentIndex() {
   if (_contentIndexCache) return _contentIndexCache;
@@ -76,26 +90,10 @@ export async function openMarkdown(path, title = "") {
 
   try {
     const text = await fetchText(path);
-
-    if (!window.markdownit) throw new Error("markdown-it non disponibile (CDN non caricato)");
-
-    const md = window.markdownit({
-      html: false,
-      linkify: true,
-      typographer: true,
-      highlight: (str, lang) => {
-        try {
-          if (lang && window.hljs && hljs.getLanguage(lang)) {
-            return `<pre><code class="hljs language-${esc(lang)}">${
-              hljs.highlight(str, { language: lang }).value
-            }</code></pre>`;
-          }
-        } catch {}
-        return `<pre><code class="hljs">${esc(str)}</code></pre>`;
-      }
-    });
-
-    modalBody().innerHTML = md.render(text);
+    const renderer = await getMarkdownRenderer();
+    const html = renderer.render(text);
+    
+    modalBody().innerHTML = html;
 
     if (window.hljs) qsa("#md-body pre code").forEach(block => hljs.highlightElement(block));
 
@@ -154,29 +152,14 @@ export async function openProject(section, slug) {
     merged += indexMd.trim();
     merged += `\n\n---\n\n`;
     for (const e of entryTexts) {
-      merged += `# ${e.date}\n\n`;
+      // Entry files already contain date heading, so just add separator before each entry
       merged += e.text.trim();
       merged += `\n\n---\n\n`;
     }
 
-    if (!window.markdownit) throw new Error("markdown-it non disponibile");
-
-    const mdFactory = window.markdownit?.default || window.markdownit;
-    const md = mdFactory({
-      html: false,
-      linkify: true,
-      typographer: true,
-      highlight: (str, lang) => {
-        try {
-          if (lang && window.hljs && hljs.getLanguage(lang)) {
-            return `<pre><code class="hljs language-${esc(lang)}">${hljs.highlight(str, { language: lang }).value}</code></pre>`;
-          }
-        } catch {}
-        return `<pre><code class="hljs">${esc(str)}</code></pre>`;
-      }
-    });
-
-    modalBody().innerHTML = md.render(merged);
+    const renderer = await getMarkdownRenderer();
+    const html = renderer.render(merged);
+    modalBody().innerHTML = html;
 
     if (window.hljs) {
       qsa("#md-body pre code").forEach(block => hljs.highlightElement(block));
