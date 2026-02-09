@@ -12,6 +12,20 @@ const modalBody = () => qs("#md-body");
 let _contentIndexCache = null;
 let _markdownRenderer = null;
 
+/**
+ * Transform relative image paths in markdown to absolute content paths
+ * Entry files use ./assets/name which needs to become /content/SECTION/SLUG/assets/name
+ */
+function transformImagePaths(markdown, section, slug, isEntryFile = false) {
+  if (!isEntryFile || !section || !slug) return markdown;
+  // Transform ./assets/name to /content/SECTION/SLUG/assets/name for absolute serving
+  const sectionUpper = String(section).toUpperCase();
+  return markdown.replace(
+    /!\[([^\]]*)\]\(\.\/assets\/([^\)]*)\)/g,
+    `![$1](./content/${sectionUpper}/${slug}/assets/$2)`
+  );
+}
+
 // Initialize markdown renderer (uses CDN libraries)
 async function getMarkdownRenderer() {
   if (_markdownRenderer) return _markdownRenderer;
@@ -145,7 +159,9 @@ export async function openProject(section, slug) {
     for (const d of entries) {
       const p = buildProjectEntryPath(project.section, project.slug, d);
       const t = await fetchText(p);
-      entryTexts.push({ date: d, text: t });
+      // Transform relative image paths for entry files (./assets/ → /content/SECTION/SLUG/assets/)
+      const transformed = transformImagePaths(t, project.section, project.slug, true);
+      entryTexts.push({ date: d, text: transformed });
     }
 
     let merged = "";

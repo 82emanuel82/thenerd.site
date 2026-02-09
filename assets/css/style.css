@@ -218,6 +218,15 @@
   margin: 1.6em 0;
 }
 
+/* Immagini */
+#md-body img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+  margin: 0.85em 0;
+  display: block;
+}
+
 /* Link */
 #md-body a {
   color: #4ade80;

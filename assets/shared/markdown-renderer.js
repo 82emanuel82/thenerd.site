@@ -7,17 +7,29 @@
  *   Browser (website):  const renderer = await createMarkdownRenderer(window.markdownit, window.hljs);
  */
 
-export async function createMarkdownRenderer(markdownitLib, hljsLib) {
+export async function createMarkdownRenderer(markdownitLib, hljsLib, options = {}) {
   if (!markdownitLib) {
     throw new Error("markdown-it library is required");
   }
+
+  // Helper: Escape HTML to prevent XSS
+  const escapeHtmlLocal = (text) => {
+    const map = {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#039;"
+    };
+    return String(text).replace(/[&<>"']/g, m => map[m]);
+  };
 
   // Factory function to create configured instances
   const createInstance = () => {
     const MarkdownItClass = markdownitLib.default || markdownitLib;
     
-    return new MarkdownItClass({
-      html: false,
+    const md = new MarkdownItClass({
+      html: true,  // Enable HTML rendering for images
       linkify: true,
       typographer: true,
       highlight(code, lang) {
@@ -41,6 +53,22 @@ export async function createMarkdownRenderer(markdownitLib, hljsLib) {
         return code;
       }
     });
+
+    // Custom image renderer to handle relative paths
+    const defaultImageRenderer = md.renderer.rules.image;
+    md.renderer.rules.image = function(tokens, idx, _options, env, self) {
+      const token = tokens[idx];
+      const src = token.attrGet('src');
+      const alt = token.content;
+
+      // For builder context (base64 or local file system paths)
+      if (!src) return defaultImageRenderer(tokens, idx, _options, env, self);
+
+      // Render with custom attributes for styling
+      return `<img src="${escapeHtmlLocal(src)}" alt="${escapeHtmlLocal(alt)}" style="max-width: 100%; height: auto; border-radius: 4px; margin: 0.85em 0;" />`;
+    };
+
+    return md;
   };
 
   return {
@@ -62,7 +90,7 @@ export async function createMarkdownRenderer(markdownitLib, hljsLib) {
         return md.render(trimmed);
       } catch (e) {
         console.error("[Markdown] Render error:", e);
-        return `<pre style="color: #ff6b6b; font-family: monospace;">Error: ${escapeHtml(e.message)}</pre>`;
+        return `<pre style="color: #ff6b6b; font-family: monospace;">Error: ${escapeHtmlLocal(e.message)}</pre>`;
       }
     },
 
@@ -70,14 +98,7 @@ export async function createMarkdownRenderer(markdownitLib, hljsLib) {
      * Escape HTML to prevent XSS
      */
     escapeHtml(text) {
-      const map = {
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#039;"
-      };
-      return String(text).replace(/[&<>"']/g, m => map[m]);
+      return escapeHtmlLocal(text);
     }
   };
 }
