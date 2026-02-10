@@ -14,10 +14,12 @@
       ],
       "status": "work",
       "createdAt": "2026-02-04",
-      "updatedAt": "2026-02-05",
+      "updatedAt": "2026-02-10",
       "cover": "",
       "pathIndex": "content/LAB/the-nerd-site/index.md",
       "entries": [
+        "2026-02-10",
+        "2026-02-09",
         "2026-02-05",
         "2026-02-04"
       ],
@@ -44,6 +46,6 @@
         "2026-02-06"
       ],
       "links": []
-    },
-      ]
+    }
+  ]
 }
